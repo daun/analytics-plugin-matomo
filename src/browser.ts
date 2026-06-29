@@ -23,6 +23,16 @@ const defaults: MatomoPluginConfig = {
 	scriptUrl: null,
 	requireConsent: false,
 	requireCookieConsent: false,
+	disableCookies: false,
+	doNotTrack: false,
+	cookieDomain: undefined,
+	secureCookie: false,
+	cookieSameSite: undefined,
+	enableLinkTracking: true,
+	enableHeartBeatTimer: true,
+	enableCrossDomainLinking: false,
+	disablePerformanceTracking: false,
+	domains: undefined,
 }
 
 /**
@@ -63,14 +73,46 @@ export default function matomo(options: MatomoPluginConfig): AnalyticsPlugin {
 			push(['setTrackerUrl', config.trackerUrl ?? `${config.installationUrl}matomo.php`])
 			push(['setSiteId', config.siteId])
 
+			if (config.doNotTrack) {
+				push(['setDoNotTrack', true])
+			}
+			if (config.cookieDomain) {
+				push(['setCookieDomain', config.cookieDomain])
+			}
+			if (config.secureCookie) {
+				push(['setSecureCookie', true])
+			}
+			if (config.cookieSameSite) {
+				push(['setCookieSameSite', config.cookieSameSite])
+			}
+			if (config.domains) {
+				push(['setDomains', config.domains])
+			}
+
 			if (config.requireConsent)  {
 				push(['requireConsent'])
 			} else if (config.requireCookieConsent) {
 				push(['requireCookieConsent'])
 			}
 
-			push(['enableLinkTracking'])
-			push(['enableHeartBeatTimer'])
+			if (config.disableCookies) {
+				push(['disableCookies'])
+			}
+
+			if (config.enableLinkTracking) {
+				push(['enableLinkTracking'])
+			}
+			if (typeof config.enableHeartBeatTimer === 'number') {
+				push(['enableHeartBeatTimer', config.enableHeartBeatTimer])
+			} else if (config.enableHeartBeatTimer) {
+				push(['enableHeartBeatTimer'])
+			}
+			if (config.enableCrossDomainLinking) {
+				push(['enableCrossDomainLinking'])
+			}
+			if (config.disablePerformanceTracking) {
+				push(['disablePerformanceTracking'])
+			}
 
 			const script = document.createElement('script')
 			script.type = 'text/javascript'
@@ -102,8 +144,8 @@ export default function matomo(options: MatomoPluginConfig): AnalyticsPlugin {
 			}
 		},
 		methods: {
-			paq(...args: unknown[]) {
-				return push(...args)
+			paq(command: unknown[]) {
+				return push(command)
 			},
 			updateConsent(consented: boolean) {
 				if (config.requireConsent)  {

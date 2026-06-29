@@ -22,4 +22,42 @@ export interface MatomoPluginConfig {
 
 	/** Require explicit consent for cookies only. Default: `false`. */
 	requireCookieConsent?: boolean
+
+	/**
+	 * Disable all first party cookies (cookieless tracking). Default: `false`.
+	 * Takes precedence over `requireCookieConsent`: when `true`, no cookies are
+	 * used regardless of consent state.
+	 */
+	disableCookies?: boolean
+
+	/** Respect the browser's Do Not Track setting. Default: `false`. */
+	doNotTrack?: boolean
+
+	/** Cookie domain, e.g. `*.example.com` to share cookies across subdomains. */
+	cookieDomain?: string
+
+	/** Enable the Secure flag on all first party cookies (HTTPS-only sites). Default: `false`. */
+	secureCookie?: boolean
+
+	/** SameSite attribute for tracking cookies. Matomo default is `Lax`. */
+	cookieSameSite?: 'Lax' | 'None' | 'Strict'
+
+	/** Install link tracking on applicable link elements. Default: `true`. */
+	enableLinkTracking?: boolean
+
+	/**
+	 * Enable the heartbeat timer for more accurate time-on-page.
+	 * `true` uses the Matomo default active time; a number sets the active time
+	 * in seconds; `false` disables it. Default: `true`.
+	 */
+	enableHeartBeatTimer?: boolean | number
+
+	/** Enable cross domain linking to stitch visits across owned domains. Default: `false`. */
+	enableCrossDomainLinking?: boolean
+
+	/** Disable page performance tracking. Default: `false`. */
+	disablePerformanceTracking?: boolean
+
+	/** Hostnames or domains to be treated as local, e.g. `['*.example.com']`. */
+	domains?: string[]
 }

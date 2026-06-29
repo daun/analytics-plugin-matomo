@@ -1,5 +1,6 @@
 /* global window, document */
 import { beforeEach, describe, expect, it } from 'vitest'
+import Analytics from 'analytics'
 import matomo from '../src/browser.js'
 import type { MatomoPluginConfig } from '../src/types.js'
 
@@ -9,14 +10,21 @@ const baseOptions: MatomoPluginConfig = {
 }
 
 /**
- * Build an initialized plugin instance. The plugin wires its internal `push`
- * to `window._paq` during `initialize`, so resetting that array gives us a
- * clean spy on every value the plugin sends to Matomo.
+ * Build an initialized plugin instance, running it through a real `analytics`
+ * instance so that the `methods` (paq, updateConsent) are hoisted onto the
+ * plugin exactly as they are in production.
  */
+type MatomoMethods = {
+	paq: (...args: unknown[]) => unknown
+	updateConsent: (consented: boolean) => void
+}
+
 function setup(options: MatomoPluginConfig = baseOptions) {
 	const plugin = matomo(options)
+	const analytics = Analytics({ app: 'test-app', plugins: [plugin] })
 	plugin.initialize?.({ config: plugin.config })
-	return plugin
+	const hoisted = (analytics.plugins as unknown as Record<string, MatomoMethods>).matomo
+	return Object.assign(plugin, hoisted)
 }
 
 beforeEach(() => {
@@ -73,6 +81,63 @@ describe('initialize', () => {
 		setup({ ...baseOptions, requireCookieConsent: true })
 
 		expect(window._paq).toContainEqual(['requireCookieConsent'])
+	})
+
+	it('does not push link tracking when disabled', () => {
+		setup({ ...baseOptions, enableLinkTracking: false })
+
+		expect(window._paq).not.toContainEqual(['enableLinkTracking'])
+	})
+
+	it('disables the heartbeat timer when false', () => {
+		setup({ ...baseOptions, enableHeartBeatTimer: false })
+
+		expect(window._paq.some((c) => Array.isArray(c) && c[0] === 'enableHeartBeatTimer')).toBe(false)
+	})
+
+	it('passes the active time to the heartbeat timer when a number', () => {
+		setup({ ...baseOptions, enableHeartBeatTimer: 30 })
+
+		expect(window._paq).toContainEqual(['enableHeartBeatTimer', 30])
+	})
+
+	it('pushes disableCookies when configured', () => {
+		setup({ ...baseOptions, disableCookies: true })
+
+		expect(window._paq).toContainEqual(['disableCookies'])
+	})
+
+	it('lets disableCookies win over cookie consent', () => {
+		setup({ ...baseOptions, requireCookieConsent: true, disableCookies: true })
+
+		const paq = window._paq as unknown[][]
+		const consentIndex = paq.findIndex((c) => c[0] === 'requireCookieConsent')
+		const disableIndex = paq.findIndex((c) => c[0] === 'disableCookies')
+		expect(disableIndex).toBeGreaterThan(consentIndex)
+	})
+
+	it('pushes do-not-track, cookie and domain options when configured', () => {
+		setup({
+			...baseOptions,
+			doNotTrack: true,
+			cookieDomain: '*.example.com',
+			secureCookie: true,
+			cookieSameSite: 'Strict',
+			domains: ['*.example.com'],
+		})
+
+		expect(window._paq).toContainEqual(['setDoNotTrack', true])
+		expect(window._paq).toContainEqual(['setCookieDomain', '*.example.com'])
+		expect(window._paq).toContainEqual(['setSecureCookie', true])
+		expect(window._paq).toContainEqual(['setCookieSameSite', 'Strict'])
+		expect(window._paq).toContainEqual(['setDomains', ['*.example.com']])
+	})
+
+	it('pushes cross-domain linking and performance opt-outs when configured', () => {
+		setup({ ...baseOptions, enableCrossDomainLinking: true, disablePerformanceTracking: true })
+
+		expect(window._paq).toContainEqual(['enableCrossDomainLinking'])
+		expect(window._paq).toContainEqual(['disablePerformanceTracking'])
 	})
 })
 
@@ -132,7 +197,7 @@ describe('methods', () => {
 		const plugin = setup()
 		window._paq = []
 
-		plugin.methods?.paq(['setCustomDimension', 1, 'value'])
+		plugin.paq(['setCustomDimension', 1, 'value'])
 
 		expect(window._paq).toEqual([['setCustomDimension', 1, 'value']])
 	})
@@ -141,8 +206,8 @@ describe('methods', () => {
 		const plugin = setup({ ...baseOptions, requireConsent: true })
 		window._paq = []
 
-		plugin.methods?.updateConsent(true)
-		plugin.methods?.updateConsent(false)
+		plugin.updateConsent(true)
+		plugin.updateConsent(false)
 
 		expect(window._paq).toEqual([['rememberConsentGiven'], ['forgetConsentGiven']])
 	})
@@ -151,8 +216,8 @@ describe('methods', () => {
 		const plugin = setup({ ...baseOptions, requireCookieConsent: true })
 		window._paq = []
 
-		plugin.methods?.updateConsent(true)
-		plugin.methods?.updateConsent(false)
+		plugin.updateConsent(true)
+		plugin.updateConsent(false)
 
 		expect(window._paq).toEqual([['rememberCookieConsentGiven'], ['forgetCookieConsentGiven']])
 	})

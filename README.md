@@ -49,7 +49,6 @@ analytics.track('Add', {
 
 /* Identify a visitor */
 analytics.identify('user-id-xyz')
-
 ```
 
 ## API
@@ -62,8 +61,6 @@ analytics.identify('user-id-xyz')
 
 ### Plugin methods
 
-Callable via `analytics.plugins.matomo.*`.
-
 #### `paq(...args)`
 
 Push a raw command onto Matomo's `_paq` queue.
@@ -72,51 +69,63 @@ Push a raw command onto Matomo's `_paq` queue.
 analytics.plugins.matomo.paq(['setUserId', 'user-123'])
 ```
 
-#### `updateConsent(consented)`
-
-Grant or revoke consent for tracking and cookies. See [consent handling](#consent-handling) for details.
-
-```js
-analytics.plugins.matomo.updateConsent(true)
-```
-
 ## Configuration
 
-### `installationUrl`
+### Registration
 
-Base URL of your Matomo installation. Used to derive the tracker and script URLs (`matomo.php` and `matomo.js`). Required.
+- **`installationUrl`** — Base URL of your Matomo installation. Used to derive the tracker and script URLs (`matomo.php` and `matomo.js`). Required.
+- **`siteId`** — Matomo site ID. Required.
+- **`trackerUrl`** — Custom tracker endpoint URL. Overrides the value derived from `installationUrl`. Optional.
+- **`scriptUrl`** — Custom tracking script URL. Overrides the value derived from `installationUrl`. Optional.
 
-### `siteId`
+### Privacy & Cookies
 
-Matomo site ID. Required.
+- **`requireConsent`** — Withhold all tracking until consent is granted via `updateConsent()`. Default: `false`.
+- **`requireCookieConsent`** — Track without cookies until  consent is granted via `updateConsent()`. Default: `false`.
+- **`disableCookies`** — Disable all first-party cookies (cookieless tracking). Default: `false`.
+- **`doNotTrack`** — Respect the browser's Do Not Track setting. Default: `false`.
+- **`cookieDomain`** — Cookie domain, e.g. `*.example.com` to share cookies across subdomains.
+- **`secureCookie`** — Set the `Secure` flag on all first-party cookies (HTTPS-only sites). Default: `false`.
+- **`cookieSameSite`** — `SameSite` attribute for tracking cookies: `'Lax'` (Matomo default), `'None'`, or `'Strict'`.
 
-### `trackerUrl`
+### Features
 
-Tracker endpoint URL. Overrides the value derived from `installationUrl`. Optional.
+- **`enableLinkTracking`** — Track clicks on outbound links and downloads. Default: `true`.
+- **`enableHeartBeatTimer`** — Improve time-on-page accuracy. `true` uses the Matomo default active time, a number sets the active time in seconds, `false` disables it. Default: `true`.
+- **`enableCrossDomainLinking`** — Stitch visits across multiple owned domains. Default: `false`.
+- **`disablePerformanceTracking`** — Disable page performance tracking. Default: `false`.
 
-### `scriptUrl`
+These cover the most common Matomo settings. For the complete, authoritative list of options and their types, see the config definition in the source: [`src/types.ts`](https://github.com/daun/analytics-plugin-matomo/blob/main/src/types.ts).
 
-Tracking script URL. Overrides the value derived from `installationUrl`. Optional.
+### Other Matomo settings
 
-### `requireConsent`
+The plugin only maps a subset of Matomo's tracking API to config options. For anything not listed above, push the raw command yourself with [`paq`](#paqargs). For example, to set a custom dimension:
 
-Withhold all tracking until consent is granted via `updateConsent`. Default: `false`.
-
-### `requireCookieConsent`
-
-Track without cookies until cookie consent is granted via `updateConsent`. Default: `false`.
+```js
+analytics.plugins.matomo.paq(['setCustomDimension', 1, 'premium-user'])
+```
 
 ## Consent Handling
 
-By default, the plugin tracks everything without awaiting consent. Two config options change this. Both use `updateConsent` to grant or revoke consent at runtime:
-
-```js
-analytics.plugins.matomo.updateConsent(true)
-```
+By default, the plugin tracks everything without awaiting consent. Two plugin options change this. Both use the `updateConsent` method to grant or revoke consent at runtime.
 
 - **No consent** (default): leave both options unset. All events are tracked.
 - **`requireConsent: true`**: no tracking until consent is granted.
 - **`requireCookieConsent: true`**: tracking starts immediately without cookies; cookies are set once consent is granted. Use this for cookieless tracking that adds cookies later for more accurate tracking data.
+
+```js
+const analytics = Analytics({
+  app: 'awesome-app',
+  plugins: [
+    matomoPlugin({
+      requireConsent: true,
+    })
+  ]
+})
+
+// Later... grant consent for tracking from consent dialog
+analytics.plugins.matomo.updateConsent(true)
+```
 
 ## Supported Platforms
 
