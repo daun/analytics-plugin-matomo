@@ -36,6 +36,82 @@ const defaults: MatomoPluginConfig = {
 }
 
 /**
+ * Matomo plugin
+ *
+ * @example
+ *
+ * matomo({
+ *   siteId: 1,
+ *   installationUrl: '/matomo/',
+ * })
+ */
+export default function matomo(options: MatomoPluginConfig): AnalyticsPlugin {
+	let loaded = false
+	let push: (...args: unknown[]) => void = () => { /* noop */ }
+
+	const config: MatomoPluginConfig = {
+		...defaults,
+		...options
+	}
+
+	if (!config.siteId) {
+		fail('Missing required option: siteId')
+	}
+
+	if (!config.installationUrl) {
+		fail('Missing required option: installationUrl')
+	}
+
+	return {
+		name: 'matomo',
+		config,
+		loaded: () => loaded,
+		initialize({ config }: { config: MatomoPluginConfig }) {
+			window._paq = window._paq || []
+			push = (...args) => window._paq.push(...args)
+
+			for (const command of buildSetupCommands(config)) {
+				push(command)
+			}
+
+			injectScript(config.scriptUrl ?? `${config.installationUrl}matomo.js`)
+				.then(() => (loaded = true))
+				.catch((error) => console.error(error))
+		},
+		page({ payload: { properties } }: { payload: { properties: { title?: string; url?: string } } }) {
+			push(['setDocumentTitle', properties.title ?? document.title])
+			push(['setCustomUrl', properties.url ?? window.location.href])
+			push(['trackPageView'])
+		},
+		track({ payload }: { payload: { event: string; properties: Record<string, unknown> } }) {
+			const { category, name, value } = payload.properties
+			push(['trackEvent', category, payload.event, name, value])
+		},
+		identify({ payload: { userId } }: { payload: { userId?: string } }) {
+			if (userId) {
+				push(['setUserId', userId])
+			} else {
+				push(['resetUserId'])
+			}
+		},
+		methods: {
+			paq(command: unknown[]) {
+				return push(command)
+			},
+			updateConsent(consented: boolean) {
+				if (config.requireConsent)  {
+					push([consented ? 'rememberConsentGiven' : 'forgetConsentGiven'])
+				} else if (config.requireCookieConsent) {
+					push([consented ? 'rememberCookieConsentGiven' : 'forgetCookieConsentGiven'])
+				} else {
+					console.log('Matomo consent not required, ignoring updateConsent call')
+				}
+			}
+		}
+	}
+}
+
+/**
  * Translate a resolved plugin config into an ordered list of `_paq` setup commands.
  */
 export function buildSetupCommands(config: MatomoPluginConfig): unknown[][] {
@@ -114,80 +190,4 @@ export function injectScript(src: string): Promise<void> {
 			document.head.appendChild(script)
 		}
 	})
-}
-
-/**
- * Matomo plugin
- *
- * @example
- *
- * matomo({
- *   siteId: 1,
- *   installationUrl: '/matomo/',
- * })
- */
-export default function matomo(options: MatomoPluginConfig): AnalyticsPlugin {
-	let loaded = false
-	let push: (...args: unknown[]) => void = () => { /* noop */ }
-
-	const config: MatomoPluginConfig = {
-		...defaults,
-		...options
-	}
-
-	if (!config.siteId) {
-		fail('Missing required option: siteId')
-	}
-
-	if (!config.installationUrl) {
-		fail('Missing required option: installationUrl')
-	}
-
-	return {
-		name: 'matomo',
-		config,
-		loaded: () => loaded,
-		initialize({ config }: { config: MatomoPluginConfig }) {
-			window._paq = window._paq || []
-			push = (...args) => window._paq.push(...args)
-
-			for (const command of buildSetupCommands(config)) {
-				push(command)
-			}
-
-			injectScript(config.scriptUrl ?? `${config.installationUrl}matomo.js`)
-				.then(() => (loaded = true))
-				.catch((error) => console.error(error))
-		},
-		page({ payload: { properties } }: { payload: { properties: { title?: string; url?: string } } }) {
-			push(['setDocumentTitle', properties.title ?? document.title])
-			push(['setCustomUrl', properties.url ?? window.location.href])
-			push(['trackPageView'])
-		},
-		track({ payload }: { payload: { event: string; properties: Record<string, unknown> } }) {
-			const { category, name, value } = payload.properties
-			push(['trackEvent', category, payload.event, name, value])
-		},
-		identify({ payload: { userId } }: { payload: { userId?: string } }) {
-			if (userId) {
-				push(['setUserId', userId])
-			} else {
-				push(['resetUserId'])
-			}
-		},
-		methods: {
-			paq(command: unknown[]) {
-				return push(command)
-			},
-			updateConsent(consented: boolean) {
-				if (config.requireConsent)  {
-					push([consented ? 'rememberConsentGiven' : 'forgetConsentGiven'])
-				} else if (config.requireCookieConsent) {
-					push([consented ? 'rememberCookieConsentGiven' : 'forgetCookieConsentGiven'])
-				} else {
-					console.log('Matomo consent not required, ignoring updateConsent call')
-				}
-			}
-		}
-	}
 }
