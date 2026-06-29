@@ -82,6 +82,13 @@ export default function matomo(options: MatomoPluginConfig): AnalyticsPlugin {
 			const { category, name, value } = payload.properties
 			push(['trackEvent', category, payload.event, name, value])
 		},
+		identify({ payload: { userId } }: { payload: { userId?: string } }) {
+			if (userId) {
+				push(['setUserId', userId])
+			} else {
+				push(['resetUserId'])
+			}
+		},
 		methods: {
 			paq(...args: unknown[]) {
 				return push(...args)

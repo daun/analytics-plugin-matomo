@@ -48,10 +48,7 @@ analytics.track('Add', {
 })
 
 /* Identify a visitor */
-analytics.identify('user-id-xyz', {
-  firstName: 'bill',
-  lastName: 'murray'
-})
+analytics.identify('user-id-xyz')
 
 ```
 
