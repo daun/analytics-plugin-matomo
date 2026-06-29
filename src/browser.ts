@@ -12,6 +12,10 @@ declare global {
 	}
 }
 
+function fail(message: string): never {
+	throw new Error(`[analytics-plugin-matomo] ${message}`)
+}
+
 const defaults: MatomoPluginConfig = {
 	siteId: null,
 	installationUrl: null,
@@ -38,6 +42,14 @@ export default function matomo(options: MatomoPluginConfig): AnalyticsPlugin {
 	const config: MatomoPluginConfig = {
 		...defaults,
 		...options
+	}
+
+	if (!config.siteId) {
+		fail('Missing required option: siteId')
+	}
+
+	if (!config.installationUrl) {
+		fail('Missing required option: installationUrl')
 	}
 
 	return {
