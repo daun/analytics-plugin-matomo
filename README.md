@@ -74,10 +74,9 @@ analytics.plugins.matomo.paq(['setUserId', 'user-123'])
 
 #### `updateConsent(consented)`
 
-Grant (`true`) or revoke (`false`) consent. Maps to [Matomo's consent functions](https://developer.matomo.org/guides/tracking-consent): `rememberConsentGiven` when `requireConsent` is set, `rememberCookieConsentGiven` when `requireCookieConsent` is set. No-op when neither is set.
+Grant or revoke consent for tracking and cookies. See [consent handling](#consent-handling) for details.
 
 ```js
-/* After user consent is granted in a consent dialog */
 analytics.plugins.matomo.updateConsent(true)
 ```
 
