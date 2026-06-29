@@ -1,8 +1,7 @@
-/**
- * Node side
- */
+import type { AnalyticsPlugin } from 'analytics'
+import type { MatomoPluginConfig } from './types.js'
 
-const config = {}
+export type { MatomoPluginConfig } from './types.js'
 
 const name = 'matomo'
 
@@ -10,31 +9,13 @@ const logMessage = () => {
   console.log(`${name} tracking is not available in node.js yet. Todo implement https://github.com/matomo-org/matomo-nodejs-tracker`)
 }
 
-/* Export the integration */
-function matomoPlugin(userConfig = {}) {
-  // Allow for userland overides of base methods
+export default function matomoPlugin(config: Partial<MatomoPluginConfig> = {}): AnalyticsPlugin {
   return {
     name,
-    config: {
-      ...config,
-      ...userConfig
-    },
-    initialize: ({ config }) => {
-      logMessage()
-    },
-    // page view
-    page: ({ payload, config }) => {
-      logMessage()
-    },
-    // track event
-    track: ({ payload, config }) => {
-      logMessage()
-    },
-    // identify user
-    identify: ({ payload }) => {
-      logMessage()
-    }
+    config: { ...config },
+    initialize: () => logMessage(),
+    page: () => logMessage(),
+    track: () => logMessage(),
+    identify: () => logMessage()
   }
 }
-
-export default matomoPlugin
