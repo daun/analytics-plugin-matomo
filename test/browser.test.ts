@@ -1,7 +1,7 @@
 /* global window, document */
 import { beforeEach, describe, expect, it } from 'vitest'
 import Analytics from 'analytics'
-import matomo from '../src/browser.js'
+import matomo, { buildSetupCommands, injectScript } from '../src/browser.js'
 import type { MatomoPluginConfig } from '../src/types.js'
 
 const baseOptions: MatomoPluginConfig = {
@@ -138,6 +138,64 @@ describe('initialize', () => {
 
 		expect(window._paq).toContainEqual(['enableCrossDomainLinking'])
 		expect(window._paq).toContainEqual(['disablePerformanceTracking'])
+	})
+})
+
+describe('buildSetupCommands', () => {
+	const resolved = (overrides: Partial<MatomoPluginConfig> = {}): MatomoPluginConfig => ({
+		siteId: 1,
+		installationUrl: '/matomo/',
+		...overrides,
+	})
+
+	it('starts with tracker url and site id', () => {
+		expect(buildSetupCommands(resolved())).toEqual([
+			['setTrackerUrl', '/matomo/matomo.php'],
+			['setSiteId', 1],
+		])
+	})
+
+	it('derives tracker url from installationUrl, honours explicit trackerUrl', () => {
+		expect(buildSetupCommands(resolved())[0]).toEqual(['setTrackerUrl', '/matomo/matomo.php'])
+		expect(buildSetupCommands(resolved({ trackerUrl: 'https://x/track' }))[0]).toEqual([
+			'setTrackerUrl',
+			'https://x/track',
+		])
+	})
+
+	it('orders consent before disableCookies', () => {
+		const commands = buildSetupCommands(resolved({ requireCookieConsent: true, disableCookies: true }))
+		const consent = commands.findIndex((c) => c[0] === 'requireCookieConsent')
+		const disable = commands.findIndex((c) => c[0] === 'disableCookies')
+		expect(disable).toBeGreaterThan(consent)
+	})
+
+	it('lets requireConsent win over requireCookieConsent', () => {
+		const commands = buildSetupCommands(resolved({ requireConsent: true, requireCookieConsent: true }))
+		expect(commands).toContainEqual(['requireConsent'])
+		expect(commands).not.toContainEqual(['requireCookieConsent'])
+	})
+
+	it('encodes heartbeat as bare command, number, or omitted', () => {
+		expect(buildSetupCommands(resolved({ enableHeartBeatTimer: true }))).toContainEqual(['enableHeartBeatTimer'])
+		expect(buildSetupCommands(resolved({ enableHeartBeatTimer: 30 }))).toContainEqual(['enableHeartBeatTimer', 30])
+		expect(
+			buildSetupCommands(resolved({ enableHeartBeatTimer: false })).some((c) => c[0] === 'enableHeartBeatTimer')
+		).toBe(false)
+	})
+})
+
+describe('injectScript', () => {
+	it('inserts an async script with the given src and fires onLoad', () => {
+		let loaded = false
+		injectScript('/matomo/matomo.js', () => (loaded = true))
+
+		const script = document.querySelector('script[src="/matomo/matomo.js"]') as HTMLScriptElement
+		expect(script).not.toBeNull()
+		expect(script.async).toBe(true)
+
+		script.dispatchEvent(new Event('load'))
+		expect(loaded).toBe(true)
 	})
 })
 

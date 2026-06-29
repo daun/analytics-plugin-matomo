@@ -36,6 +36,84 @@ const defaults: MatomoPluginConfig = {
 }
 
 /**
+ * Translate a resolved plugin config into an ordered list of `_paq` setup commands.
+ */
+export function buildSetupCommands(config: MatomoPluginConfig): unknown[][] {
+	const commands: unknown[][] = [
+		['setTrackerUrl', config.trackerUrl ?? `${config.installationUrl}matomo.php`],
+		['setSiteId', config.siteId],
+	]
+
+	if (config.doNotTrack) {
+		commands.push(['setDoNotTrack', true])
+	}
+
+	if (config.cookieDomain) {
+		commands.push(['setCookieDomain', config.cookieDomain])
+	}
+
+	if (config.secureCookie) {
+		commands.push(['setSecureCookie', true])
+	}
+
+	if (config.cookieSameSite) {
+		commands.push(['setCookieSameSite', config.cookieSameSite])
+	}
+
+	if (config.domains) {
+		commands.push(['setDomains', config.domains])
+	}
+
+	if (config.requireConsent) {
+		commands.push(['requireConsent'])
+	} else if (config.requireCookieConsent) {
+		commands.push(['requireCookieConsent'])
+	}
+
+	if (config.disableCookies) {
+		commands.push(['disableCookies'])
+	}
+
+	if (config.enableLinkTracking) {
+		commands.push(['enableLinkTracking'])
+	}
+
+	if (typeof config.enableHeartBeatTimer === 'number') {
+		commands.push(['enableHeartBeatTimer', config.enableHeartBeatTimer])
+	} else if (config.enableHeartBeatTimer) {
+		commands.push(['enableHeartBeatTimer'])
+	}
+
+	if (config.enableCrossDomainLinking) {
+		commands.push(['enableCrossDomainLinking'])
+	}
+
+	if (config.disablePerformanceTracking) {
+		commands.push(['disablePerformanceTracking'])
+	}
+
+	return commands
+}
+
+/**
+ * Inject the Matomo tracking script into the document
+ */
+export function injectScript(src: string, onLoad: () => void): void {
+	const script = document.createElement('script')
+	script.type = 'text/javascript'
+	script.async = true
+	script.src = src
+	script.addEventListener('load', onLoad)
+
+	const el = document.getElementsByTagName('script')[0]
+	if (el?.parentNode) {
+		el.parentNode.insertBefore(script, el)
+	} else {
+		document.head.appendChild(script)
+	}
+}
+
+/**
  * Matomo plugin
  *
  * @example
@@ -70,62 +148,12 @@ export default function matomo(options: MatomoPluginConfig): AnalyticsPlugin {
 			window._paq = window._paq || []
 			push = (...args) => window._paq.push(...args)
 
-			push(['setTrackerUrl', config.trackerUrl ?? `${config.installationUrl}matomo.php`])
-			push(['setSiteId', config.siteId])
+			buildSetupCommands(config).forEach((command) => push(command))
 
-			if (config.doNotTrack) {
-				push(['setDoNotTrack', true])
-			}
-			if (config.cookieDomain) {
-				push(['setCookieDomain', config.cookieDomain])
-			}
-			if (config.secureCookie) {
-				push(['setSecureCookie', true])
-			}
-			if (config.cookieSameSite) {
-				push(['setCookieSameSite', config.cookieSameSite])
-			}
-			if (config.domains) {
-				push(['setDomains', config.domains])
-			}
-
-			if (config.requireConsent)  {
-				push(['requireConsent'])
-			} else if (config.requireCookieConsent) {
-				push(['requireCookieConsent'])
-			}
-
-			if (config.disableCookies) {
-				push(['disableCookies'])
-			}
-
-			if (config.enableLinkTracking) {
-				push(['enableLinkTracking'])
-			}
-			if (typeof config.enableHeartBeatTimer === 'number') {
-				push(['enableHeartBeatTimer', config.enableHeartBeatTimer])
-			} else if (config.enableHeartBeatTimer) {
-				push(['enableHeartBeatTimer'])
-			}
-			if (config.enableCrossDomainLinking) {
-				push(['enableCrossDomainLinking'])
-			}
-			if (config.disablePerformanceTracking) {
-				push(['disablePerformanceTracking'])
-			}
-
-			const script = document.createElement('script')
-			script.type = 'text/javascript'
-			script.async = true
-			script.src = config.scriptUrl ?? `${config.installationUrl}matomo.js`
-			script.addEventListener('load', () => (loaded = true))
-
-			const el = document.getElementsByTagName('script')[0]
-			if (el?.parentNode) {
-				el.parentNode.insertBefore(script, el)
-			} else {
-				document.head.appendChild(script)
-			}
+			injectScript(
+				config.scriptUrl ?? `${config.installationUrl}matomo.js`,
+				() => (loaded = true)
+			)
 		},
 		page({ payload: { properties } }: { payload: { properties: { title?: string; url?: string } } }) {
 			push(['setDocumentTitle', properties.title ?? document.title])
