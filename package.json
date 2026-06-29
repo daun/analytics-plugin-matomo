@@ -1,6 +1,6 @@
 {
   "name": "analytics-plugin-matomo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Matomo plugin for the analytics module",
   "type": "module",
   "source": "./src/browser.ts",
