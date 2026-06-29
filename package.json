@@ -1,0 +1,42 @@
+{
+  "name": "analytics-plugin-matomo",
+  "version": "1.0.0",
+  "description": "Matomo plugin for 'analytics' module",
+  "type": "module",
+  "source": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "analytics",
+    "analytics-project",
+    "analytics-plugin",
+    "matomo"
+  ],
+  "author": "Philipp Daun",
+  "license": "MIT",
+  "homepage": "https://github.com/daun/analytics-plugin-matomo#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daun/analytics-plugin-matomo.git"
+  },
+  "devDependencies": {
+    "@babel/preset-typescript": "^7.18.6",
+    "@types/node": "^26.0.1",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.9.3"
+  }
+}
