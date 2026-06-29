@@ -186,16 +186,15 @@ describe('buildSetupCommands', () => {
 })
 
 describe('injectScript', () => {
-	it('inserts an async script with the given src and fires onLoad', () => {
-		let loaded = false
-		injectScript('/matomo/matomo.js', () => (loaded = true))
+	it('inserts an async script and resolves on load', async () => {
+		const promise = injectScript('/matomo/matomo.js')
 
 		const script = document.querySelector('script[src="/matomo/matomo.js"]') as HTMLScriptElement
 		expect(script).not.toBeNull()
 		expect(script.async).toBe(true)
 
 		script.dispatchEvent(new Event('load'))
-		expect(loaded).toBe(true)
+		await expect(promise).resolves.toBeUndefined()
 	})
 })
 

@@ -96,21 +96,24 @@ export function buildSetupCommands(config: MatomoPluginConfig): unknown[][] {
 }
 
 /**
- * Inject the Matomo tracking script into the document
+ * Inject the Matomo tracking script into the document.
  */
-export function injectScript(src: string, onLoad: () => void): void {
-	const script = document.createElement('script')
-	script.type = 'text/javascript'
-	script.async = true
-	script.src = src
-	script.addEventListener('load', onLoad)
+export function injectScript(src: string): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const script = document.createElement('script')
+		script.type = 'text/javascript'
+		script.async = true
+		script.src = src
+		script.addEventListener('load', () => resolve())
+		script.addEventListener('error', () => reject(new Error(`Failed to load Matomo script: ${src}`)))
 
-	const el = document.getElementsByTagName('script')[0]
-	if (el?.parentNode) {
-		el.parentNode.insertBefore(script, el)
-	} else {
-		document.head.appendChild(script)
-	}
+		const el = document.getElementsByTagName('script')[0]
+		if (el?.parentNode) {
+			el.parentNode.insertBefore(script, el)
+		} else {
+			document.head.appendChild(script)
+		}
+	})
 }
 
 /**
@@ -148,12 +151,13 @@ export default function matomo(options: MatomoPluginConfig): AnalyticsPlugin {
 			window._paq = window._paq || []
 			push = (...args) => window._paq.push(...args)
 
-			buildSetupCommands(config).forEach((command) => push(command))
+			for (const command of buildSetupCommands(config)) {
+				push(command)
+			}
 
-			injectScript(
-				config.scriptUrl ?? `${config.installationUrl}matomo.js`,
-				() => (loaded = true)
-			)
+			injectScript(config.scriptUrl ?? `${config.installationUrl}matomo.js`)
+				.then(() => (loaded = true))
+				.catch((error) => console.error(error))
 		},
 		page({ payload: { properties } }: { payload: { properties: { title?: string; url?: string } } }) {
 			push(['setDocumentTitle', properties.title ?? document.title])
